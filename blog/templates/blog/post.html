@@ -1,0 +1,38 @@
+{% extends 'blog/base.html' %}
+{% block title %}All Blog Posts{% endblock %}
+
+{% block content %}
+<div class="heading-page header-text">
+  <section class="page-heading">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="text-content">
+            <h4>Blog Posts</h4>
+            <h2>Titles Only</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<section class="blog-posts grid-system">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-12">
+        <ul class="list-group">
+          {% for post in posts %}
+            <li class="list-group-item">
+              <a href="{% url 'post_detail' post.id %}">{{ post.title }}</a>
+              <span class="text-muted" style="font-size: 0.85rem;">({{ post.created_at|date:"F d, Y" }})</span>
+            </li>
+          {% empty %}
+            <li class="list-group-item">No posts available.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
