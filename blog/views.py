@@ -1,169 +1,162 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Post, Comment
-from .forms import CommentForm
-from .forms import ContactForm
-from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from .forms import UserRegistrationForm, PostForm
-from .forms import SignUpForm
+from django.contrib.auth import login
 from django.http import HttpResponseForbidden
+from django.core.paginator import Paginator
+from django.contrib import messages
+from .models import Post, Comment, Category, Tag, ContactMessage
+from .forms import CommentForm, ContactForm, PostForm, SignUpForm
 
-
-# Rename or alias 'my_view' to 'home'
 def home(request):
-    return render(request, 'blog/blog.html')  # This will act as your homepage
+    """Homepage view showing featured/latest posts"""
+    featured_posts = Post.objects.filter(status='published').select_related(
+        'author', 'category'
+    ).prefetch_related('tags').order_by('-created_at')[:3]
+    return render(request, 'blog/blog.html', {'featured_posts': featured_posts})
 
-
-def my_view(request):
-    return render(request, 'blog/blog.html')  # Assuming your template is in blog/templates/blog/blog.html
-
-def posts(request):
-    posts = Post.objects.all()
-    return render(request, 'blog/post.html', {'posts': posts})
+def post_list(request):
+    """List all published posts with pagination"""
+    post_list = Post.objects.filter(status='published').select_related(
+        'author', 'category'
+    ).prefetch_related('tags').order_by('-created_at')
+    paginator = Paginator(post_list, 5)  # Show 5 posts per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'blog/post_list.html', {'page_obj': page_obj})
 
 def about(request):
+    """Static about page"""
     return render(request, 'blog/about.html')
 
 def contact(request):
+    """Handle contact form submissions"""
     if request.method == 'POST':
         form = ContactForm(request.POST)
-        if form.is_valid():   
+        if form.is_valid():
             form.save()
-            return redirect('contact')  # Optionally redirect or show a success message
+            messages.success(request, 'Your message has been sent successfully!')
+            return redirect('contact')
     else:
         form = ContactForm()
     return render(request, 'blog/contact.html', {'form': form})
 
 def post_detail(request, post_id):
-    post = get_object_or_404(Post, id=post_id)
-    comments = post.comments.all()
-
+    """Show post details and handle comments"""
+    post = get_object_or_404(
+        Post.objects.select_related('author', 'category').prefetch_related('tags'),
+        id=post_id,
+        status='published'
+    )
+    comments = post.comments.filter(active=True).select_related('post')
+    
     if request.method == 'POST':
-        form = CommentForm(request.POST) 
-        if form.is_valid():
-            comment = form.save(commit=False)
-            comment.post = post
-            comment.save()
+        comment_form = CommentForm(request.POST)
+        if comment_form.is_valid():
+            new_comment = comment_form.save(commit=False)
+            new_comment.post = post
+            new_comment.save()
+            messages.success(request, 'Your comment has been submitted and is awaiting moderation.')
             return redirect('post_detail', post_id=post.id)
     else:
-        form = CommentForm()
-
-    return render(request, 'blog/postdetails.html', {
+        comment_form = CommentForm()
+    
+    return render(request, 'blog/post_detail.html', {
         'post': post,
         'comments': comments,
-        'form': form
+        'comment_form': comment_form
     })
 
 def signup(request):
+    """User registration view"""
     if request.method == 'POST':
         form = SignUpForm(request.POST)
         if form.is_valid():
-            form.save()
-            return redirect('login')
+            user = form.save()
+            login(request, user)
+            messages.success(request, 'Registration successful!')
+            return redirect('home')
     else:
         form = SignUpForm()
     return render(request, 'blog/signup.html', {'form': form})
 
 @login_required
 def create_post(request):
+    """Create new blog post"""
     if request.method == 'POST':
-        form = PostForm(request.POST)
+        form = PostForm(request.POST, request.FILES)
         if form.is_valid():
             post = form.save(commit=False)
-            post.author = request.user  # Automatically set current user
+            post.author = request.user
             post.save()
-            return redirect('post_list')  # or any page
-    else:
-        form = PostForm()
-    return render(request, 'blog/create_post.html', {'form': form})
-
-def create_post(request):
-    if request.method == 'POST':
-        form = PostForm(request.POST)
-        if form.is_valid():
-            post = form.save(commit=False)
-            post.author = request.user  # logged-in user
-            post.save()
-            return redirect('post_list')  # redirects to All Posts page
-    else:
-        form = PostForm()
-    return render(request, 'blog/create_post.html', {'form': form})
-
-@login_required
-def post_detail(request, post_id):
-    post = get_object_or_404(Post, id=post_id)
-    comments = post.comments.all()
-
-    # Only the author can edit/delete
-    if request.method == 'POST':
-        if 'edit_post' in request.POST:
-            if post.author != request.user:
-                return HttpResponseForbidden("You cannot edit this post.")
-            form = PostForm(request.POST, instance=post)
-            if form.is_valid():
-                form.save()
-                return redirect('post_detail', post_id=post.id)
-        elif 'delete_post' in request.POST:
-            if post.author != request.user:
-                return HttpResponseForbidden("You cannot delete this post.")
-            post.delete()
-            return redirect('post_list')  # redirect after delete
+            form.save_m2m()  # Save many-to-many relationships (tags)
+            messages.success(request, 'Post created successfully!')
+            return redirect('post_detail', post_id=post.id)
         else:
-            # Handle comments form submit or other POSTs
-            form = CommentForm(request.POST)
-            if form.is_valid():
-                comment = form.save(commit=False)
-                comment.post = post
-                comment.save()
-                return redirect('post_detail', post_id=post.id)
+            messages.error(request, 'Form is invalid. Please correct the errors.')
+            print(form.errors)  # Optional: helpful for debugging during development
     else:
-        form = CommentForm()
-        post_form = PostForm(instance=post)
+        form = PostForm(initial={'status': 'draft'})
 
-    return render(request, 'blog/postdetails.html', {
-        'post': post,
-        'comments': comments,
-        'form': form,         # comment form
-        'post_form': post_form  # edit post form
-    })
-
-
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+    return render(request, 'blog/post_form.html', {'form': form})
 
 @login_required
 def edit_post(request, post_id):
+    """Edit existing post"""
     post = get_object_or_404(Post, id=post_id)
-    print(f"Post author: {post.author}, Current user: {request.user}")
-    if post.author.id != request.user.id:
-        return HttpResponseForbidden("You cannot edit this post.")
-
+    if post.author != request.user:
+        return HttpResponseForbidden("You don't have permission to edit this post.")
+    
     if request.method == 'POST':
         form = PostForm(request.POST, request.FILES, instance=post)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Post updated successfully!')
             return redirect('post_detail', post_id=post.id)
     else:
         form = PostForm(instance=post)
     
-    return render(request, 'blog/edit_post.html', {'form': form, 'post': post})
-
+    return render(request, 'blog/post_form.html', {'form': form, 'post': post})
 
 @login_required
 def delete_post(request, post_id):
+    """Delete post with confirmation"""
     post = get_object_or_404(Post, id=post_id)
     if post.author != request.user:
-        return HttpResponseForbidden("You cannot delete this post.")
-
+        return HttpResponseForbidden("You don't have permission to delete this post.")
+    
     if request.method == 'POST':
         post.delete()
-        return redirect('post_list')
+        messages.success(request, 'Post deleted successfully!')
+        return redirect('dashboard')
     
-    return render(request, 'blog/delete_post_confirm.html', {'post': post})
-
-
+    return render(request, 'blog/post_confirm_delete.html', {'post': post})
 
 @login_required
 def dashboard(request):
-    user_posts = Post.objects.filter(author=request.user).order_by('-created_at')  # or your date field
+    """User dashboard showing their posts"""
+    user_posts = Post.objects.filter(author=request.user).order_by('-created_at')
     return render(request, 'blog/dashboard.html', {'posts': user_posts})
+
+def category_posts(request, category_id):
+    """Show posts by category"""
+    category = get_object_or_404(Category, id=category_id)
+    posts = Post.objects.filter(
+        category=category,
+        status='published'
+    ).select_related('author').prefetch_related('tags').order_by('-created_at')
+    return render(request, 'blog/category_posts.html', {
+        'category': category,
+        'posts': posts
+    })
+
+def tag_posts(request, tag_id):
+    """Show posts by tag"""
+    tag = get_object_or_404(Tag, id=tag_id)
+    posts = Post.objects.filter(
+        tags=tag,
+        status='published'
+    ).select_related('author', 'category').order_by('-created_at')
+    return render(request, 'blog/tag_posts.html', {
+        'tag': tag,
+        'posts': posts
+    })

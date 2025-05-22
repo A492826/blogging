@@ -1,0 +1,15 @@
+{% extends 'blog/base.html' %}
+{% block content %}
+<div class="max-w-4xl mx-auto mt-10">
+  <h2 class="text-2xl font-bold mb-6">Posts in "{{ category.name }}"</h2>
+  {% for post in posts %}
+    <div class="mb-5 p-4 border border-gray-200 rounded hover:shadow">
+      <h3 class="text-xl font-semibold">{{ post.title }}</h3>
+      <p class="text-sm text-gray-500">{{ post.created_at|date:"F j, Y" }}</p>
+      <a href="{% url 'post_detail' post.id %}" class="text-blue-600 hover:underline mt-1 block">Read more</a>
+    </div>
+  {% empty %}
+    <p>No posts found in this category.</p>
+  {% endfor %}
+</div>
+{% endblock %}

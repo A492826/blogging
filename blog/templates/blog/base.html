@@ -3,86 +3,125 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="">
-  <meta name="author" content="TemplateMo">
-  <link href="https://fonts.googleapis.com/css?family=Roboto:100,100i,300,300i,400,400i,500,500i,700,700i,900,900i&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{% block meta_description %}Abdullah's Blog - A place for sharing thoughts and ideas{% endblock %}">
+  <meta name="author" content="Abdullah">
+  <meta name="keywords" content="{% block meta_keywords %}blog, technology, thoughts{% endblock %}">
 
-  <title>{% block title %}Stand Blog{% endblock %}</title>
+  <!-- Preconnect to external resources -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-  <!-- Bootstrap core CSS -->
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+
+  <title>{% block title %}Abdullah's Blog{% endblock %}</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="{% static 'assets/images/favicon.ico' %}" type="image/x-icon">
+
+  <!-- CSS -->
   <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
-
-  <!-- Additional CSS Files -->
-  <link rel="stylesheet" href="{% static 'assets/css/fontawesome.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/fontawesome.min.css' %}">
   <link rel="stylesheet" href="{% static 'assets/css/templatemo-stand-blog.css' %}">
-  <link rel="stylesheet" href="{% static 'assets/css/owl.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/owl.min.css' %}">
+
+  {% block extra_css %}{% endblock %}
 </head>
 
 <body>
-  <!-- ***** Preloader Start ***** -->
-  <div id="preloader">
+  <!-- Skip to main content for accessibility -->
+  <br>
+
+  <!-- Preloader -->
+  <div id="preloader" aria-hidden="true">
     <div class="jumper">
       <div></div>
       <div></div>
       <div></div>
     </div>
   </div>
-  <!-- ***** Preloader End ***** -->
 
   <!-- Header -->
-  <header class="">
-    <nav class="navbar navbar-expand-lg">
+  <header>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
       <div class="container">
-        <a class="navbar-brand" href="{% url 'blog' %}"><h2>Abdullah Blog<em>.</em></h2></a>
+        <a class="navbar-brand" href="{% url 'home' %}" aria-label="Abdullah's Blog Home">
+          <h1 class="site-title">Abdullah Blog<em>.</em></h1>
+        </a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive"
                 aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarResponsive">
-         <ul class="navbar-nav ml-auto">
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'home' %}">Home</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'about' %}">About Us</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'blog' %}">Blog Entries</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'post_list' %}">All Posts</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'contact' %}">Contact Us</a>
-  </li>
-</ul>
-
+          <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'home' %}" aria-current="{% if request.resolver_match.url_name == 'home' %}page{% endif %}">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'about' %}" aria-current="{% if request.resolver_match.url_name == 'about' %}page{% endif %}">About Us</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'post_list' %}" aria-current="{% if request.resolver_match.url_name == 'post_list' %}page{% endif %}">All Posts</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'contact' %}" aria-current="{% if request.resolver_match.url_name == 'contact' %}page{% endif %}">Contact Us</a>
+            </li>
+            {% if user.is_authenticated %}
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+            </li>
+            {% else %}
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'login' %}">Login</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'signup' %}">Sign Up</a>
+            </li>
+            {% endif %}
+          </ul>
         </div>
       </div>
     </nav>
   </header>
 
   <!-- Main Content -->
-  {% block content %}
-  {% endblock %}
+<main id="main-content" class="py-5 mt-5">
+    {% if messages %}
+    <div class="container mt-3">
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}
+    {% endblock %}
+  </main>
 
   <!-- Footer -->
-  <footer>
+  <footer class="footer mt-auto py-3">
     <div class="container">
       <div class="row">
-        <div class="col-lg-12">
-          <ul class="social-icons">
-            <li><a href="https://www.facebook.com/" target="_blank">Facebook</a></li>
-            <li><a href="https://twitter.com/" target="_blank">Twitter</a></li>
-            <li><a href="https://www.behance.net/" target="_blank">Behance</a></li>
-            <li><a href="https://www.linkedin.com/" target="_blank">Linkedin</a></li>
-            <li><a href="https://dribbble.com/" target="_blank">Dribbble</a></li>
+        <div class="col-12">
+          <ul class="social-icons list-inline">
+            <li class="list-inline-item"><a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fab fa-facebook"></i></a></li>
+            <li class="list-inline-item"><a href="https://twitter.com/" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><i class="fab fa-twitter"></i></a></li>
+            <li class="list-inline-item"><a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a></li>
+            <li class="list-inline-item"><a href="https://github.com/" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><i class="fab fa-github"></i></a></li>
           </ul>
         </div>
-        <div class="col-lg-12">
-          <div class="copyright-text">
-            <p>Copyright 2020 Stand Blog Co. | Design: <a rel="nofollow" href="https://templatemo.com" target="_parent">TemplateMo</a></p>
+        <div class="col-12">
+          <div class="copyright-text text-center">
+            <p class="mb-0">&copy; {% now "Y" %} Abdullah's Blog. All rights reserved.</p>
           </div>
         </div>
       </div>
@@ -92,21 +131,17 @@
   <!-- Scripts -->
   <script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>
   <script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-  <script src="{% static 'assets/js/custom.js' %}"></script>
-  <script src="{% static 'assets/js/owl.js' %}"></script>
-  <script src="{% static 'assets/js/slick.js' %}"></script>
-  <script src="{% static 'assets/js/isotope.js' %}"></script>
-  <script src="{% static 'assets/js/accordions.js' %}"></script>
+  <script src="{% static 'assets/js/custom.js' %}" defer></script>
+  
+  {% block extra_js %}{% endblock %}
 
-  <script language="text/Javascript"> 
-    cleared[0] = cleared[1] = cleared[2] = 0;
-    function clearField(t) {
-      if(!cleared[t.id]) {
-        cleared[t.id] = 1;
-        t.value='';
-        t.style.color='#fff';
-      }
-    }
-  </script>
+  <!-- No-JS fallback -->
+  <noscript>
+    <div class="container mt-3">
+      <div class="alert alert-warning" role="alert">
+        For full functionality of this site it is necessary to enable JavaScript.
+      </div>
+    </div>
+  </noscript>
 </body>
 </html>
